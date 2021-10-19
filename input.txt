@@ -1,0 +1,28 @@
+#вот это комментарий
+
+#в конце каждой строки
+
+#infix operator
+operator: a [dis] b = a && b; 
+
+///
+
+#определение отношения с именем same_father, теперь a и b находятся в отношении same_father (True здесь нужно потому что тело всегда есть)
+rel: same_father(a, b) = True;
+
+#аналогично
+rel: same_mother(a, b) = True;
+rel: true_anyway() = True;
+
+#телом отношения может быть дизъюнкция целей (в данном случае -- дизъюнкция вызовов отношений)
+rel: siblings(x, y) = same_father(x, y) [dfgdfbfhbfgbs] same_mother(x, y);
+
+#или конъюнкцией
+rel: not_adopted(a, b) = same_father(a,b) || same_mother(a,b) || false_anyway();
+
+#также может быть юнификацией (?????????????????????????)
+rel: example_for_uni(n, m) = example_for_uni(s,t);
+
+#аргументом вызова отношения может быть конструктор 
+/// 
+same_mother(Julder{a}, Shcally{});
