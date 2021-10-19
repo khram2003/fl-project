@@ -1,0 +1,65 @@
+{
+  "scopeName": "source.abc",
+  "patterns": [
+    {
+      "include": "#expression"
+    }
+  ],
+  "repository": {
+    "expression": {
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#typeconstants"
+        },
+        {
+          "include": "#kw"
+        },
+        {
+          "include": "#delim"
+        },
+        {
+          "include": "#oper"
+        },
+        {
+          "include": "#constr"
+        },
+        {
+          "include": "#relation"
+        }
+      ]
+    },
+    "comments": {
+      "match": "(\\#.*)",
+      "name": "comment"
+    },
+    "typeconstants": {
+      "match": "True|False",
+      "name": "constant.language"
+    },
+    "kw": {
+      "match": "rel|operator|uni",
+      "name": "keyword.control"
+    },
+    "delim":
+    {
+      "match": "///",
+      "name": "entity.name.namespace"  
+    },
+    "oper":
+    {
+      "match": "&& | \\|\\| | \\[[A-Za-z_]+\\]",
+      "name": "entity.name.function.member" 
+    },
+    "constr": {
+      "match": "[A-Za-z_]+(?=\\{)",
+      "name": "entity.name.type.class"
+    },
+    "relation": {
+      "match": "[A-Za-z_]+(?=\\()",
+      "name": "variable.other.event"
+    }
+  }
+}

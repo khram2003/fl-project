@@ -1,0 +1,18 @@
+{
+    "Operator definition": {
+      "prefix": ["oper"],
+      "body": ["operator: ${1:fst_arg} [${3:op_name}] ${2:snd_arg} = ${1:fst_arg}  ${2:snd_arg};"],
+      "description": "Operator definition."
+    },
+    "Relation definition": {
+        "prefix": ["rel"],
+        "body": ["rel: ${1:rel_name} ();"],
+        "description": "Relation definition."
+      },
+
+      "Unification": {
+        "prefix": ["uni"],
+        "body": ["uni: ${1:rel_name} (${3:arg1}, ${4:arg2})  = ${2:rel_name} (${5:arg1}, ${6:arg2});"],
+        "description": "Relation definition."
+      }
+}
