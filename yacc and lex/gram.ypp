@@ -1,0 +1,246 @@
+%{
+#include <iostream>
+#include <string>
+#include <map>
+#include <cstdlib>
+#include <vector>
+#include <set>
+#include <fstream>
+#include <unordered_map>
+#include <map>
+#include <cstring>
+
+using namespace std;
+
+struct node {
+    std::string msg;
+    node(const std::string &s) : msg(s) {}
+};
+
+int yylex(); 
+int yyerror(const char *p) { cerr << "Error: " << p << endl; }
+
+std::vector<size_t> args;
+std::vector<size_t> st; 
+
+size_t global_count = 0;
+
+std::unordered_map<std::string, size_t> name_table;
+std::vector<std::vector<size_t>> graph(1e3, std::vector<size_t> (1, 0)); 
+std::unordered_map<size_t, node*> nodes;
+
+%}
+
+%union {
+  size_t val; 
+  char str[128];
+  char sym;
+};
+
+%token <str> T_DISJUN 
+%token <str> T_CONJUN
+%token <str> T_SEMICOLON
+%token <str> T_COLON;
+%token <str> T_REL_DEF
+%token <str> T_OP_DEF
+%token <str> T_OBJ_NAME
+%token <str> T_OPEN_BR
+%token <str> T_CLOSE_BR
+%token <str> T_OPEN_R_BR
+%token <str> T_CLOSE_R_BR
+%token <str> T_EQ 
+%token <str> T_DELIM
+%token <str> T_COMMA
+%token <str> T_OPEN_B_BR
+%token <str> T_CLOSE_B_BR 
+%type <val> T_REL_STATEMENT
+%type <val> T_OP_STATEMENT
+%type <val> T_REL_CALL
+%type <val> T_OPS_BLOCK
+%type <val> T_REL_BLOCK
+%token <str> T_GO
+%token <str> T_CUSTOM_OP
+%type <str> T_OPERATOR
+%type <str> T_ARGS
+%type <val> T_ARGUMENTS
+%type <val> T_TERM
+%type <str> T_F_ARGS
+%type <str> T_CONSTRUCTOR
+
+%%
+
+start : T_OPS_BLOCK T_DELIM T_REL_BLOCK T_DELIM T_REL_CALL T_SEMICOLON {
+    nodes[global_count] = new node("CODE ");
+    graph[global_count].push_back($1);
+    graph[global_count].push_back($3);
+    graph[global_count].push_back($5);
+}
+
+T_OPS_BLOCK : T_OP_STATEMENT T_OPS_BLOCK {
+    graph[global_count].push_back($1);
+    graph[global_count].push_back($2);
+    node *t = new node("Code\: ");
+    nodes[global_count] = t;
+    node *t1 = new node("Operator's statement");
+    nodes[$1] = t1;
+    global_count += 2;
+    $$ = global_count - 2;
+}
+| T_OP_STATEMENT {
+    node *t = new node("Operator's statement");
+    nodes[$1] = t;
+    
+    $$ = $1;
+}
+
+T_OP_STATEMENT : T_OP_DEF T_COLON T_OBJ_NAME T_CUSTOM_OP T_OBJ_NAME T_EQ T_TERM T_SEMICOLON {
+    graph[global_count].push_back(global_count + 1);
+    node *atom = new node("Operands"); 
+    nodes[global_count + 1] = atom;
+
+    graph[global_count + 1].push_back(global_count + 2);
+    node *lo = new node("Left operand " + std::string($3));
+    nodes[global_count + 2] = lo;
+
+    graph[global_count + 1].push_back(global_count + 3);
+    node *ro = new node("Right operand " + std::string($5));
+    nodes[global_count + 3] = ro;
+
+    graph[global_count].push_back($7);
+    global_count += 4;
+    $$ = global_count - 4;
+}
+
+T_TERM : T_TERM T_OPERATOR T_TERM { 
+    node *term = new node("Term\: " + std::string($2));
+    nodes[global_count] = term;
+
+    graph[global_count].push_back($1);
+
+    graph[global_count].push_back($3);
+    global_count++;
+    $$ = global_count - 1;
+}
+| T_OPEN_R_BR T_TERM T_CLOSE_R_BR {$$ = $2;}
+| T_REL_CALL {$$ = $1;}
+| T_OBJ_NAME {
+    nodes[global_count] = new node("Atom " + std::string($1));
+    global_count++;
+    $$ = global_count - 1;
+} 
+
+T_REL_CALL : T_OBJ_NAME T_OPEN_R_BR T_F_ARGS T_CLOSE_R_BR {
+    nodes[global_count] = new node("Rel Call\: " + std::string($1) + "(" + std::string($3) +")"); 
+    global_count++;
+    $$ = global_count - 1;
+} 
+| T_OBJ_NAME T_OPEN_R_BR T_CLOSE_R_BR {
+    nodes[global_count] = new node("Rel Call\: " + std::string($1) + "(" + ")"); 
+    global_count++;
+    $$ = global_count - 1;
+}
+
+T_OPERATOR : T_CUSTOM_OP {}
+| T_CONJUN {}
+| T_DISJUN {}
+
+T_REL_BLOCK : T_REL_STATEMENT T_REL_BLOCK {
+    graph[global_count].push_back($1);
+    graph[global_count].push_back($2);
+    node *t = new node("Rel Code\: ");
+    nodes[global_count] = t;
+    node *t1 = new node("Relative's statement");
+    nodes[$1] = t1;
+    global_count += 2;
+    $$ = global_count - 2;
+}
+| T_REL_STATEMENT {
+}
+
+T_REL_STATEMENT : T_REL_DEF T_COLON T_OBJ_NAME T_ARGUMENTS T_EQ T_TERM T_SEMICOLON {
+    graph[global_count].push_back($4);
+    graph[global_count].push_back($6);
+    nodes[global_count] = new node("Relative's statement " + std::string($3));
+    global_count += 1;
+    $$ = global_count - 1;
+}
+
+T_ARGUMENTS : T_OPEN_R_BR T_ARGS T_CLOSE_R_BR {
+    for (const auto &x : args) {
+        graph[global_count].push_back(x);
+    }
+    nodes[global_count] = new node("Arguments\: "); 
+    global_count++;
+    $$ = global_count - 1;
+    args.clear();
+}
+| T_OPEN_R_BR T_CLOSE_R_BR {
+    nodes[global_count] = new node("Empty atom"); 
+    global_count++;
+    $$ = global_count - 1;
+}
+
+T_ARGS : T_OBJ_NAME T_COMMA T_ARGS {
+    nodes[global_count++] = new node("Arg " + std::to_string(args.size() + 1) + ": "  + std::string($1));
+    args.push_back(global_count - 1);
+}
+| T_OBJ_NAME {
+    nodes[global_count++] = new node("Arg " + std::to_string(args.size() + 1) + ": "  + std::string($1));
+    args.push_back(global_count - 1);
+}
+
+T_F_ARGS : T_OBJ_NAME T_COMMA T_F_ARGS {
+    char s[128];
+    strcpy(s, $1);
+    strcat(s, $2);
+    strcat(s, $3);
+    strcpy($$, s);
+}
+| T_CONSTRUCTOR T_COMMA T_F_ARGS {
+    char s[128];
+    strcpy(s, $1);
+    strcat(s, $2);
+    strcat(s, $3);
+    strcpy($$, s);
+}
+| T_OBJ_NAME {
+}
+| T_CONSTRUCTOR {
+} 
+
+T_CONSTRUCTOR : T_OBJ_NAME T_OPEN_B_BR T_F_ARGS T_CLOSE_B_BR {
+    char s[128];
+    strcpy(s, $1);
+    strcat(s, $2);
+    strcat(s, $3);
+    strcat(s, $4);
+    strcpy($$, s);
+} 
+| T_OBJ_NAME T_OPEN_B_BR T_CLOSE_B_BR {
+    char s[128];
+    strcpy(s, $1);
+    strcat(s, $2);
+    strcat(s, $3);
+    strcpy($$, s);
+} 
+
+%%
+
+int main(int argc, char **argv) {
+  if (argc != 2) {
+      std::cout << "Invalid number of arguments: 1 is needed, but " << argc - 1 << "found\n";
+      exit(1);
+  } 
+
+  freopen(argv[1], "r", stdin);
+  yyparse();
+
+  for (auto const &x : nodes) {
+      std::cout << x.first << ' ' << x.second->msg << ";" << (graph[x.first].size() > 1 ? "  Childs: " : ""); 
+      for (int j = 1; j < graph[x.first].size(); j++) {
+          std::cout << graph[x.first][j] << ' ';
+      }
+      std::cout << std::endl;
+  }
+  return 0;
+}
