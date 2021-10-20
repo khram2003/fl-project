@@ -1,2 +1,4 @@
 fl-project.code-workspace
-parser
+gram.tab.cpp
+gram.tab.hpp
+lex.c
